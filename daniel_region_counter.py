@@ -292,7 +292,7 @@ def run(
                     threading.Thread(target=ready_putting).start()
 
                     first_line_second = current_time
-            if current_region[3]['in'] == True and  bbox_center[0] < list(current_region[3]['polygon'].exterior.coords)[0][0]  :
+            if current_region[3]['in'] == True and  bbox_center[0] < list(current_region[3]['polygon'].exterior.coords)[0][0]:
                  print("########################################")
                  if golf_shot_sound == 0:
                     threading.Thread(target=golf_shot).start()
