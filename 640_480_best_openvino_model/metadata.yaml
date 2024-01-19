@@ -1,0 +1,13 @@
+description: Ultralytics 640_480_best model trained on /content/640_480_golf/data.yaml
+author: Ultralytics
+license: AGPL-3.0 https://ultralytics.com/license
+date: '2024-01-15T00:22:30.123548'
+version: 8.1.1
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: golf
