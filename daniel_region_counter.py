@@ -16,32 +16,31 @@ import pygame
 import time
 
 track_history = defaultdict(list)                    
-                                                                                       
+pygame.mixer.init()                                                                                      
 
 def golf_sound(): #홀 안에 들어갔을때
-    pygame.mixer.init()
     pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\minigolf-putt-right-into-the-hole.mp3') # 소리 파일 경로
     pygame.mixer.music.play()
 
 def golf_out_sound(): #골프공이 그린존 바깥으로 벗어났을 때
-    pygame.mixer.init()
     pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\jazzy_fail.wav') # 소리 파일 경로
     pygame.mixer.music.play()
 
 def start_sound(): #골프공을 선에 맞춰주세요
-    pygame.mixer.init()
     pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\골프공을선에맞춰주세요.mp3') # 소리 파일 경로
     pygame.mixer.music.play()   
 
 def ready_putting(): #준비됐으면 퍼팅! 사운드
-    pygame.mixer.init()
     pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\준비됐으면퍼팅.wav') # 소리 파일 경로
     pygame.mixer.music.play()     
 
-def golf_shot(): #준비됐으면 퍼팅! 사운드
-    pygame.mixer.init()
+def golf_shot(): #퍼팅했을때 사운드
     pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\golf_shot.wav') # 소리 파일 경로
     pygame.mixer.music.play()    
+
+def 공이_멈췄어():
+    pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\공이멈췄어.mp3') # 소리 파일 경로
+    pygame.mixer.music.play()        
 # def music_function():
 #     pygame.mixer.music.play()
 
@@ -85,16 +84,8 @@ counting_regions = [
          'region_color': (0, 0, 0),  # BGR Value 검은색
          'text_color': (255, 255, 255),  # Region Text Color
          'in' : False
-    },
-    {
-         'name': 'start_line', #시작선 여기 넘어가면 치는걸로 간주됨
-         'polygon': Polygon([(518, 309), (518, 384),(520, 384), (520, 309)]),  # Polygon points
-         'counts': 0,
-         'dragging': False, 
-         'region_color': (255, 255, 255),  # BGR Value 흰색
-         'text_color': (255, 255, 255)  # Region Text Color
-    }    ]
-current_region = counting_regions
+    } ]
+current_region = None
 #[(517, 308), (541, 309), (541, 384), (517, 382)] 초기 골프공 치는 영역
 #[(43, 386), (45, 323), (51, 307), (62, 304), (638, 310), (638, 384)]
 japyo_lst = []
@@ -116,13 +107,14 @@ def mouse_callback(event, x, y, flags, param):
 
     # Mouse move event
     elif event == cv2.EVENT_MOUSEMOVE:
-        if current_region is not None and current_region['dragging']:
+        if current_region is not None and current_region['dragging'] == True:
             dx = x - current_region['offset_x']
             dy = y - current_region['offset_y']
             current_region['polygon'] = Polygon([
                 (p[0] + dx, p[1] + dy) for p in current_region['polygon'].exterior.coords])
             current_region['offset_x'] = x
             current_region['offset_y'] = y
+            counting_regions[counting_regions.index(current_region)] = current_region
             # print(list(current_region['polygon'].exterior.coords)[0][0])
 
    # Mouse left button up event
@@ -132,7 +124,7 @@ def mouse_callback(event, x, y, flags, param):
 
 
 def run(
-    weights='C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\small_golf_best_openvino_model',
+    weights='C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\best_openvino_model',
     source=1, #웹캠 0 1 2
     device='cpu',
     view_img=True,
@@ -174,6 +166,19 @@ def run(
     
     golf_shot_sound = 0
 
+    first_lineout_time_boolean = False
+
+    first_box_center_x_boolean = False
+    first_box_center_x = None
+
+    게임_시작 = False #처음 부터 골프 아웃 소리나 홀인원소리 들리지 않게!
+
+    공_움직이나 = False #움직이는 상태
+    초기선_침 = True
+    다시_그린존 = False
+    그린존_바깥 = True #처음에는 공이 밖에있다 정의
+
+    골프_점수 = 0
 
 
     # Setup Model
@@ -182,17 +187,17 @@ def run(
 
     # Extract classes names
     #names = model.model.names
-    print("--------------------------")
+    
     #print(names) {0: 'golf'}
 
 
     # Video setup
     videocapture = cv2.VideoCapture(source)
     frame_width, frame_height = int(videocapture.get(3)), int(videocapture.get(4))
-    print(frame_width)
+    
     fps, fourcc = int(videocapture.get(5)), cv2.VideoWriter_fourcc(*'mp4v')
 
-    print(str(frame_width) + " " + str(frame_height))
+    # print(str(frame_width) + " " + str(frame_height))
     # Output setup
     save_dir = increment_path(Path('ultralytics_rc_output') / 'exp', exist_ok)
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -201,14 +206,16 @@ def run(
     # Iterate over video frames
     while videocapture.isOpened():
         success, frame = videocapture.read()
-        
         if not success:
             break
         vid_frame_count += 1 #진짜 진행되는 프레임!!
         current_time = time.time()
+        # before_time = current_time - 0.5
+
         # print(current_time)
-        if vid_frame_count == 10:
-            threading.Thread(target=start_sound).start()  # 새로운 쓰레드에서 소리 재생
+        if vid_frame_count == 1:
+            start_sound()
+            
         
         # Extract the results
         results = model.track(frame, persist=True, classes=classes)
@@ -220,83 +227,149 @@ def run(
             #print(clss)
             #print(type(clss))
             annotator = Annotator(frame, line_width=line_thickness, example=str({0: 'golf'}))
-
+                             
             for box, track_id, cls in zip(boxes, track_ids, clss):
                 annotator.box_label(box, str("GOLF_BALL"), color=colors(0, True))
                 bbox_center = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2  # Bbox center
-                print(bbox_center)
+                
+                print(str(bbox_center[0]) + " " + str(bbox_center[1]))
                 track = track_history[track_id]  # Tracking Lines plot
                 track.append((float(bbox_center[0]), float(bbox_center[1])))
-                if len(track) > 5: 
+                                                     
+                if len(track) > 5:                
                     track.pop(0)
                 points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                 cv2.polylines(frame, [points], isClosed=False, color=colors(cls, True), thickness=track_thickness)
                           
-
-            #작은 홀 안에 들어갔을 때
-            if current_region[0]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
-                current_region[0]['counts'] += 1
-                
-                if golf_in_count == 0:
-                    threading.Thread(target=golf_sound).start()  # 새로운 쓰레드에서 소리 재생
-                    golf_in_count += 1
-                    golf_in_second = current_time
-
-                if current_time - golf_in_second > 5 and golf_in_count != 0:
-                    threading.Thread(target=golf_sound).start()  # 새로운 쓰레드에서 소리 재생
-                    golf_in_count += 1
-                    golf_in_second = current_time    
-            
-            #큰 홀 안에 들어갔을 때
-            if current_region[1]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
-                current_region[1]['counts'] += 1
-                
-                if golf_in_count == 0:
-                    threading.Thread(target=golf_sound).start()  # 새로운 쓰레드에서 소리 재생
-                    golf_in_count += 1
-                    golf_in_second = current_time
-
-                if current_time - golf_in_second > 5 and golf_in_count != 0:
-                    threading.Thread(target=golf_sound).start()  # 새로운 쓰레드에서 소리 재생
-                    golf_in_count += 1
-                    golf_in_second = current_time    
-            
-            #그린 존 바깥으로 공이 나갈때
-            if current_region[2]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) != True:                  
-                current_region[2]['counts'] += 1
-                
-
-                if first_out_sound == 0:
-                    threading.Thread(target=golf_out_sound).start()
-                    first_out_sound += 1
-                    last_golf_out_sound_played = current_time
-
-                if current_time - last_golf_out_sound_played > 5 and first_out_sound != 0:  # 마지막으로 소리를 재생한 후 5초 이상 지났다면
-                    threading.Thread(target=golf_out_sound).start()  # 새로운 쓰레드에서 소리 재생
-                    last_golf_out_sound_played = current_time  # 재생 시간 업데이트       
-            
-            #초기 라인에 공을 놔뒀을 때 (이거 되면 칠 준비 완료!!)
-            if current_region[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
-                print("----------------------------------------------")
-                current_region[3]['counts'] += 1 #스타트 영역에 공이 있는지 없는지 실시간 판별
-                current_region[3]['in'] = True    
-                          
-                if last_line_sound_count == 0:
-                    threading.Thread(target=ready_putting).start()
-                                                
-                    last_line_sound_count += 1                            
-                    first_line_second = current_time
-                               
-                if current_time - first_line_second > 6 and last_line_sound_count != 0:
+                #초기 라인에 공을 놔뒀을 때 (이거 되면 칠 준비 완료!!)
+                if counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) and 그린존_바깥 == True :
+                    print("----------------------------------------------")
+                    counting_regions[3]['counts'] += 1 #스타트 영역에 공이 있는지 없는지 실시간 판별
+                    counting_regions[3]['in'] = True    
+                    그린존_바깥 = False #공이 바깥으로 나가면 점수 1 +=x 하고 다시 초기라인에서 시작한다. 다른 거 막아두고 여기로오게 해야함.
+                    초기선_침 = True #다시 초기로 돌아올때는 초기선에서 친다는 거를 True로 바꿔줘야 아웃되서 나가도 다시 소리가 난다.
+                    게임_시작 = True #초기 라인에 놔둘 때 골프 측정하는 게임이 시작된다!!
+                     
+                    if last_line_sound_count == 0:
+                        ready_putting()
+                                                    
+                        last_line_sound_count += 1                            
+                        first_line_second = time.time()                    
+                                                               
+                    elif time.time() - first_line_second > 6:
+                        ready_putting()
+                       
+                        first_line_second = time.time()
                     
-                    threading.Thread(target=ready_putting).start()
+                #초기 선에서 쳤을때!        
+                if counting_regions[3]['in'] == True and  bbox_center[0] < list(counting_regions[3]['polygon'].exterior.coords)[0][0] and 초기선_침 == True and 그린존_바깥 == False :
+                    print("########################################")
+                    counting_regions[3]['in'] == False #더이상 초기영역에   없다 상태로 false로 바꿈
+                    공_움직이나 = True
+                    초기선_침 = False
 
-                    first_line_second = current_time
-            if current_region[3]['in'] == True and  bbox_center[0] < list(current_region[3]['polygon'].exterior.coords)[0][0]:
-                 print("########################################")
-                 if golf_shot_sound == 0:
-                    threading.Thread(target=golf_shot).start()
-                    golf_shot_sound += 1
+                    if golf_shot_sound == 0:
+                        golf_shot()
+                        
+                        golf_shot_sound += 1                    
+
+                    if first_lineout_time_boolean == False:
+                        before_time = time.time()
+                        first_lineout_time_boolean = True
+
+                    if first_box_center_x_boolean == False:
+                        first_box_center_x = bbox_center[0]
+                        first_box_center_x_boolean = True
+
+
+               
+                #초기 치는 걸 제외한 다시 그린존에서 다시 치는 경우
+                if 다시_그린존 == True and abs(first_box_center_x - bbox_center[0]) > 3 and 그린존_바깥 == False: #다시 공이 움직일때, 쳤을때
+                    공_움직이나 = True
+                    다시_그린존 = False #골프친 사운드 한번만 플레이
+                    golf_shot()
+                    
+
+                #공이 친다음에 멈췄을때까지 확인
+                if 공_움직이나 == True and time.time() - before_time > 0.8 and 그린존_바깥 == False and 게임_시작 == True: #1초마다 체크
+                    if abs(first_box_center_x - bbox_center[0]) < 3: #3픽셀 이하로 차이 있을때 = 멈춤
+                        print("멈춤 사운드 삽임")
+                        공_움직이나 = False #멈췄기때문에, 친 상태가 끝났기 때문에 false로 바꾼다
+                        # 초기선_침 = False
+                        다시_그린존 = True
+
+
+                        공이_멈췄어()
+                        골프_점수 += 1 #나간거는 점수 1 더하는거 1번만 해야함
+
+
+                    else: #계속 움직이고 있을 때
+                        before_time = time.time() #시간 다시 부여
+                        first_box_center_x = bbox_center[0] #좌표 다시 부여
+
+                #작은 홀 안에 들어갔을 때
+                if 그린존_바깥 == False and counting_regions[0]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) and 게임_시작 == True:
+                    counting_regions[0]['counts'] += 1
+                    print("최종스코어:" + str(골프_점수))
+                    골프_점수 = 0
+                    
+                    공_움직이나 = False
+                    그린존_바깥 = True
+                    golf_shot_sound = 0 #다시 초기선에서 칠때 소리가 나야해서
+
+
+                    if golf_in_count == 0:
+                        golf_sound()
+                        golf_in_count += 1
+                        golf_in_second = current_time
+
+                    elif current_time - golf_in_second > 5:
+                        golf_sound()
+                        golf_in_count += 1
+                        golf_in_second = current_time    
+                
+                #큰 홀 안에 들어갔을 때
+                if 그린존_바깥 == False and counting_regions[1]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) and 게임_시작 == True:
+                    counting_regions[1]['counts'] += 1
+                    print("최종스코어:" + str(골프_점수))
+                    골프_점수 = 0
+
+                    공_움직이나 = False
+                    그린존_바깥 = True
+                    golf_shot_sound = 0 #다시 초기선에서 칠때 소리가 나야해서
+
+
+                    if golf_in_count == 0:
+                        golf_sound()
+                        golf_in_count += 1
+                        golf_in_second = current_time
+
+                    elif current_time - golf_in_second > 5:
+                        golf_sound()
+                        golf_in_count += 1
+                        golf_in_second = current_time    
+                
+                #그린 존 바깥으로 공이 나갈때
+                if 그린존_바깥 == False and counting_regions[2]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) != True and 게임_시작 == True:                  
+                    counting_regions[2]['counts'] += 1
+                    
+                    공_움직이나 = False #다시 공을 고정한 상태로 있어야 하기때문에 공이 안움직이다로 정의해야함!
+                    그린존_바깥 = True
+                    golf_shot_sound = 0 #다시 초기선에서 칠때 소리가 나야해서
+
+                    if first_out_sound == 0:
+                        golf_out_sound()
+
+                        골프_점수 += 1 #나간거는 점수 1 더하는거 1번만 해야함. 
+
+                        first_out_sound += 1
+                        last_golf_out_sound_played = time.time()
+
+                    elif time.time() - last_golf_out_sound_played > 5:  # 마지막으로 소리를 재생한 후 5초 이상 지났다면
+                        golf_out_sound()
+                        last_golf_out_sound_played = time.time()  # 재생 시간 업데이트       
+                
+
 
 
                           
@@ -327,7 +400,7 @@ def run(
             if vid_frame_count == 1:
                 cv2.namedWindow('Ultralytics YOLOv8 Region Counter Movable')
                 cv2.setMouseCallback('Ultralytics YOLOv8 Region Counter Movable', mouse_callback)
-            cv2.imshow('Ultralytics YOLOv8 Region Counter Movable', frame)
+            threading.Thread(cv2.imshow('Ultralytics YOLOv8 Region Counter Movable', frame)).start()
             
 
         if save_img:
