@@ -124,7 +124,7 @@ def mouse_callback(event, x, y, flags, param):
 
 
 def run(
-    weights='C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\best_openvino_model',
+    weights='C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\경계선밖데이터도넣은_openvino_model',
     source=1, #웹캠 0 1 2
     device='cpu',
     view_img=True,
