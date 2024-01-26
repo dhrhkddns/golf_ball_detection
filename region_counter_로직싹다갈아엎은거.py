@@ -163,6 +163,8 @@ def run(
     측정 = False #세가지 중 하나 상태를 측정 중일때, 공이 그린존에서 멈출때, 공이 그린존 바깥으로 나갈때, 공이 홀안에 들어갈때
 
     게임_시작 = False
+    폐기1 = False
+    폐기2 = False
 
     # Setup Model
     model = YOLO(f'{weights}')
@@ -229,7 +231,7 @@ def run(
                 # 골프공이 정지해 있는지 또는 움직이고 있는지 확인합니다.
                 
                 if len(track) > 30:
-                    이전_위치 = track[-31]
+                    이전_위치 = track[0]
                     현재_위치 = track[-1]
                     거리 = ((이전_위치[0] - 현재_위치[0]) ** 2 + (이전_위치[1] - 현재_위치[1]) ** 2) ** 0.5 #피타고라스로 거리 구함.
                     if 거리 > 3:
@@ -238,40 +240,38 @@ def run(
                         공_움직임 = False
                         # 공이_멈췄어()
 
-                #if bbox_center is in counting_regions[3] start_region, then ready_putting() 사운드 1번만 재생
-                if counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
-                    게임_시작 = True
-                    if counting_regions[3]['in'] == False:
-                        counting_regions[3]['in'] = True
-                        ready_putting()
-                        print("준비됐으면 퍼팅! 사운드")
+                #시작 영역(start_region)에 있으면 
+                if 폐기1 == False and counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
+                    게임_시작 = True 
+                    폐기1 = True #폐기1은 True로 바꿔서 다시는 if문에 들어가지 않도록 합니다.
                     
                 
-                # bbox_center가 counting_regions[3]['polygon'] 안에 있다가 counting_regions[3]['polygon'] 밖으로 나가면 변수 '측정'을 True로 바꿉니다.
-                if counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) == False:
-                    if counting_regions[3]['in'] == True:
-                        counting_regions[3]['in'] = False
+                # 시작 영역(start_region)에 있으면 게임을 시작합니다.
+                if 게임_시작 == True:
+                    
+                    if 폐기2 == False and counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) == False:  
                         측정 = True
-                        print("골프공이 start_region 밖으로 나감")
-                        golf_shot()
-                
-                # 측정 == True이고 골프공이 그린존에 멈췄는지, 그린존 밖으로 나갔는지, 홀 안으로 들어갔는지 확인합니다.
-                if 측정 == True:
-                    if counting_regions[0]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) or counting_regions[1]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
-                        golf_sound()
-                        print("최종스코어: " + str(골프_점수))
-                        측정 = False
-                        게임_시작 = False
+                        폐기2 = True #폐기2는 True로 바꿔서 다시는 if문에 들어가지 않도록 합니다.
+                    
 
-                    elif counting_regions[2]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) == False:
-                        golf_out_sound()
-                        골프_점수 += 1
-                        측정 = False
+                        
+                    # 측정 == True이고 골프공이 그린존에 멈췄는지, 그린존 밖으로 나갔는지, 홀 안으로 들어갔는지 확인합니다.
+                    if 측정 == True:
+                        if counting_regions[0]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) or counting_regions[1]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
+                            golf_sound()
+                            print("최종스코어: " + str(골프_점수))
+                            측정 = False
+                            게임_시작 = False
 
-                    elif 공_움직임 == False:
-                        골프_점수 += 1
-                        측정 = False
-                        공이_멈췄어()
+                        elif counting_regions[2]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) == False:
+                            golf_out_sound()
+                            골프_점수 += 1
+                            측정 = False
+
+                        elif 공_움직임 == False:
+                            골프_점수 += 1
+                            측정 = False
+                            공이_멈췄어()
                 
 
 
