@@ -168,6 +168,7 @@ def run(
 
     공_start_region_존재 = []
 
+    a = 0
     # Setup Model
     model = YOLO(f'{weights}')
     #model.to('cuda') if device == '0' else model.to('cpu')
@@ -250,10 +251,7 @@ def run(
                     이전_공_start_region_존재 = 공_start_region_존재[0]
                     현재_공_start_region_존재 = 공_start_region_존재[-1]
 
-                    if 이전_공_start_region_존재 == True:
-                        if 현재_공_start_region_존재 == False:
-                            if 공_움직임: 
-                                측정 = True
+
 
                 #시작 영역(start_region)에 있으면 
                 if 폐기1 == False and counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
@@ -268,7 +266,16 @@ def run(
                         측정 = True
                         폐기2 = True #폐기2는 True로 바꿔서 다시는 if문에 들어가지 않도록 합니다.
                     
-
+                    #그린존 나갔을 때 다시 측정 True하기 위한 조건
+                    if 이전_공_start_region_존재 == True:
+                        if 현재_공_start_region_존재 == False:
+                            if 공_움직임 == True: 
+                                측정 = True
+                   
+                    #공이 그린존 안에서 멈췄을때 다시 측정 True로 할당하기 위한 조건
+                    if 공_움직임 == True and a == 1:
+                        측정 = True
+                        a -= 1
                         
                     # 측정 == True이고 골프공이 그린존에 멈췄는지, 그린존 밖으로 나갔는지, 홀 안으로 들어갔는지 확인합니다.
                     if 측정 == True:
@@ -286,6 +293,7 @@ def run(
                         elif 공_움직임 == False:
                             골프_점수 += 1
                             측정 = False
+                            a += 1
                             공이_멈췄어()
                 
 
