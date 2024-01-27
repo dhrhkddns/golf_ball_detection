@@ -16,7 +16,7 @@ from ultralytics.utils.plotting import Annotator, colors
 import threading
 import pygame
 import time
-
+#새로움
 track_history = defaultdict(list)                    
 pygame.mixer.init()                                                                                      
 
@@ -166,6 +166,8 @@ def run(
     폐기1 = False
     폐기2 = False
 
+    공_start_region_존재 = []
+
     # Setup Model
     model = YOLO(f'{weights}')
     #model.to('cuda') if device == '0' else model.to('cpu')
@@ -239,6 +241,19 @@ def run(
                     else: 
                         공_움직임 = False
                         # 공이_멈췄어()
+                
+                공_start_region_존재.append(counting_regions[3]['polygon'].contains(Point(bbox_center[0], bbox_center[1])))
+
+                if len(공_start_region_존재) > 30:
+                    공_start_region_존재.pop(0)
+
+                    이전_공_start_region_존재 = 공_start_region_존재[0]
+                    현재_공_start_region_존재 = 공_start_region_존재[-1]
+
+                    if 이전_공_start_region_존재 == True:
+                        if 현재_공_start_region_존재 == False:
+                            if 공_움직임: 
+                                측정 = True
 
                 #시작 영역(start_region)에 있으면 
                 if 폐기1 == False and counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
