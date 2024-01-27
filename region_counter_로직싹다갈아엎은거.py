@@ -169,6 +169,7 @@ def run(
     공_start_region_존재 = []
 
     a = 0
+    b = 0
     # Setup Model
     model = YOLO(f'{weights}')
     #model.to('cuda') if device == '0' else model.to('cpu')
@@ -270,8 +271,9 @@ def run(
                     #그린존 나갔을 때 다시 측정 True하기 위한 조건
                     if 이전_공_start_region_존재 == True:
                         if 현재_공_start_region_존재 == False:
-                            if 공_움직임 == True: 
+                            if 공_움직임 == True and b == 1: 
                                 측정 = True
+                                b -= 1
                                 golf_shot()
                    
                     #공이 그린존 안에서 멈췄을때 다시 측정 True로 할당하기 위한 조건
@@ -291,6 +293,7 @@ def run(
                         elif counting_regions[2]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) == False:
                             golf_out_sound()
                             골프_점수 += 1
+                            b += 1
                             측정 = False
 
                         elif 공_움직임 == False:
