@@ -264,6 +264,7 @@ def run(
                     
                     if 폐기2 == False and counting_regions[3]['polygon'].contains(Point((bbox_center[0], bbox_center[1]))) == False:  
                         측정 = True
+                        golf_shot()
                         폐기2 = True #폐기2는 True로 바꿔서 다시는 if문에 들어가지 않도록 합니다.
                     
                     #그린존 나갔을 때 다시 측정 True하기 위한 조건
@@ -271,10 +272,12 @@ def run(
                         if 현재_공_start_region_존재 == False:
                             if 공_움직임 == True: 
                                 측정 = True
+                                golf_shot()
                    
                     #공이 그린존 안에서 멈췄을때 다시 측정 True로 할당하기 위한 조건
                     if 공_움직임 == True and a == 1:
                         측정 = True
+                        golf_shot()
                         a -= 1
                         
                     # 측정 == True이고 골프공이 그린존에 멈췄는지, 그린존 밖으로 나갔는지, 홀 안으로 들어갔는지 확인합니다.
