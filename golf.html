@@ -28,13 +28,35 @@
 <body>
     <!-- Lottie Animation Player -->
     <dotlottie-player 
+        id="lottiePlayer"
         src="https://lottie.host/071cccc3-b83e-4457-8bed-3fca907267cf/NSduZlXklu.json" 
         background="transparent" 
-        speed="1" 
+        speed="1.5" 
         style="width: 100%; height: 100%;" 
         direction="1" 
         playMode="normal"
+        loop
         autoplay>
     </dotlottie-player>
+
+    <script>
+        // 애니메이션 플레이어 요소 가져오기
+        var lottiePlayer = document.getElementById('lottiePlayer');
+        
+        // 재생 횟수를 세기 위한 변수 설정
+        var playCount = 0;
+        
+        // 애니메이션 재생이 끝날 때마다 실행되는 이벤트 리스너 추가
+        lottiePlayer.addEventListener('loopComplete', function() {
+            // 재생 횟수 증가
+            playCount++;
+            
+            // 3번 재생하면
+            if(playCount >= 10) {
+                // 애니메이션 재생 중지
+                lottiePlayer.pause();
+            }
+        });
+    </script>
 </body>
 </html>
