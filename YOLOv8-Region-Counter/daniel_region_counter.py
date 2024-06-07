@@ -14,7 +14,7 @@ from ultralytics.utils.plotting import Annotator, colors
 import threading
 import pygame
 import time
-#adswfkjalsdf
+#시작점
 track_history = defaultdict(list)                    
                                                                                        
 
