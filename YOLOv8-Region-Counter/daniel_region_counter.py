@@ -14,10 +14,10 @@ from ultralytics.utils.plotting import Annotator, colors
 import threading
 import pygame
 import time
-#시작점
+#시작점 초기화
 track_history = defaultdict(list)                    
                                                                                        
-
+#효과음 모음
 def golf_sound(): #홀 안에 들어갔을때
     pygame.mixer.init()
     pygame.mixer.music.load('C:\\Users\\omyra\\OneDrive\\바탕 화면\\Hey\\ultralytics\\examples\\YOLOv8-Region-Counter\\minigolf-putt-right-into-the-hole.mp3') # 소리 파일 경로
